@@ -9,7 +9,7 @@ import { generateConsoleCode } from './generate.js';
 import { unified } from 'unified';
 import './style.css';
 
-const initialMarkdown = await fetch('/template.md').then((res) => res.text());
+const initialMarkdown = await fetch(`${import.meta.env.BASE_URL}template.md`).then((res) => res.text());
 const parser = unified().use(remarkParse).use(remarkGfm).use(remarkFrontmatter, ['yaml']);
 const htmlCompiler = unified().use(remarkRehype).use(rehypeStringify);
 
