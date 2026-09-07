@@ -13,7 +13,7 @@ import 'toastify-js/src/toastify.css';
 
 const initialMarkdown = await fetch(`${import.meta.env.BASE_URL}template.md`).then((res) => res.text());
 const parser = unified().use(remarkParse).use(remarkGfm).use(remarkFrontmatter, ['yaml']);
-const htmlCompiler = unified().use(remarkRehype).use(rehypeStringify);
+const htmlCompiler = unified().use(remarkRehype, { allowDangerousHtml: true }).use(rehypeStringify, { allowDangerousHtml: true });
 
 document.querySelector('#app').innerHTML = `
   <main class="container">
