@@ -7,7 +7,7 @@ import remarkMath from 'remark-math';
 import rehypeKatex from "rehype-katex";
 import remarkParse from 'remark-parse';
 import remarkRehype from 'remark-rehype';
-import { generateConsoleCode, generateInjectScript } from './generate.js';
+import { generateConsoleCode, generateInjectScript, restoreConsoleCode } from './generate.js';
 import { unified } from 'unified';
 import './style.css';
 import Toastify from 'toastify-js';
@@ -47,7 +47,7 @@ document.querySelector('#app').innerHTML = `
       </select>
     </div>
     <div class="actions">
-      <button id="generate-btn" class="primary">生成代码</button>
+      <button id="generate-btn" class="primary">生成脚本</button>
       <button id="reset-btn">重置</button>
     </div>
     <section id="result-list"></section>
@@ -179,11 +179,7 @@ async function parseProblems(source) {
 }
 
 function renderResults(items) {
-  if (items.length === 0) {
-    resultListEl.innerHTML = '<p class="empty">未找到题目（请检查一级标题 #）。</p>';
-    return;
-  }
-  resultListEl.innerHTML = items
+  const problemHtml = items
     .map(
       ({ title }, idx) => `
       <article class="result-item">
@@ -196,6 +192,18 @@ function renderResults(items) {
     )
     .join('');
 
+  const restoreHtml = `
+    <article class="result-item">
+      <strong>恢复脚本 <span class="tooltip-icon" data-tooltip="恢复曾经注入的题目描述">ⓘ</span></strong>
+      <div class="item-actions">
+        <button data-action="copy-restore" title="复制">📋复制代码</button>
+        <button data-action="show-restore">显示代码</button>
+      </div>
+    </article>`;
+
+  resultListEl.innerHTML = problemHtml + restoreHtml;
+
+  // 绑定普通题目项的事件
   resultListEl.querySelectorAll('button[data-action="copy"]').forEach((button) => {
     button.addEventListener('click', async () => {
       const code = items[Number(button.dataset.index)].code;
@@ -216,17 +224,45 @@ function renderResults(items) {
       dialogCodeEl.select();
     });
   });
+
+  const copyRestoreBtn = resultListEl.querySelector('button[data-action="copy-restore"]');
+  if (copyRestoreBtn) {
+    copyRestoreBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(restoreConsoleCode);
+        showToast('已复制！请粘贴到题目编辑页面的控制台执行');
+      } catch {
+        showToast('复制失败，请使用“展示”按钮手动复制', true);
+      }
+    });
+  }
+
+  const showRestoreBtn = resultListEl.querySelector('button[data-action="show-restore"]');
+  if (showRestoreBtn) {
+    showRestoreBtn.addEventListener('click', () => {
+      dialogCodeEl.value = restoreConsoleCode;
+      dialogEl.showModal();
+      dialogCodeEl.focus();
+      dialogCodeEl.select();
+    });
+  }
 }
 
 document.querySelector('#generate-btn').addEventListener('click', async () => {
-  renderResults(await parseProblems(inputEl.value));
+  const problems = await parseProblems(inputEl.value);
+  if (problems.length === 0) {
+    showToast('未找到题目（请检查一级标题 #）', true);
+  }
+  renderResults(problems);
 });
 
 document.querySelector('#reset-btn').addEventListener('click', () => {
   if (!confirm('确认重置为模板内容？')) return;
   localStorage.removeItem('oj-inject-markdown');
   inputEl.value = initialMarkdown;
-  resultListEl.innerHTML = '';
+  renderResults([]);
 });
 
 document.querySelector('#close-dialog').addEventListener('click', () => dialogEl.close());
+
+renderResults([]);
