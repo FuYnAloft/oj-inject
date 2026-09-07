@@ -13,7 +13,17 @@ import './style.css';
 import Toastify from 'toastify-js';
 import 'toastify-js/src/toastify.css';
 
-const initialMarkdown = await fetch(`${import.meta.env.BASE_URL}template.md`).then((res) => res.text());
+const [initialMarkdown, githubCss, githubTweakedCss] = await Promise.all([
+  fetch(`${import.meta.env.BASE_URL}template.md`).then((res) => res.text()),
+  fetch(`${import.meta.env.BASE_URL}styles/github-markdown.css`).then((res) => res.text()),
+  fetch(`${import.meta.env.BASE_URL}styles/github-markdown-tweaked.css`).then((res) => res.text()),
+]);
+
+const cssMap = {
+  github: githubCss,
+  'github-tweaked': githubTweakedCss,
+};
+
 const parser = unified()
     .use(remarkParse)
     .use(remarkGfm)
@@ -28,6 +38,14 @@ document.querySelector('#app').innerHTML = `
   <main class="container">
     <h1>OpenJudge 自由题目描述</h1>
     <textarea id="markdown-input"></textarea>
+    <div class="config-bar" style="margin: 10px 0;">
+      <label for="style-select">样式：</label>
+      <select id="style-select">
+        <option value="none">无</option>
+        <option value="github">Github</option>
+        <option value="github-tweaked">Github 微调</option>
+      </select>
+    </div>
     <div class="actions">
       <button id="generate-btn" class="primary">生成代码</button>
       <button id="reset-btn">重置</button>
@@ -45,6 +63,7 @@ document.querySelector('#app').innerHTML = `
 `;
 
 const inputEl = document.querySelector('#markdown-input');
+const styleSelectEl = document.querySelector('#style-select');
 const resultListEl = document.querySelector('#result-list');
 const dialogEl = document.querySelector('#code-dialog');
 const dialogCodeEl = document.querySelector('#dialog-code');
@@ -53,6 +72,11 @@ inputEl.value = localStorage.getItem('oj-inject-markdown') || initialMarkdown;
 
 inputEl.addEventListener('input', () => {
   localStorage.setItem('oj-inject-markdown', inputEl.value);
+});
+
+styleSelectEl.value = localStorage.getItem('oj-inject-style') || 'github-tweaked';
+styleSelectEl.addEventListener('change', () => {
+  localStorage.setItem('oj-inject-style', styleSelectEl.value);
 });
 
 function showToast(text, isError = false) {
@@ -69,6 +93,16 @@ function showToast(text, isError = false) {
       fontSize: '14px',
     },
   }).showToast();
+}
+
+function postProcessHtml(rawHtml) {
+  const currentStyle = document.querySelector('#style-select')?.value || 'github-tweaked';
+  if (currentStyle === 'none') {
+    return rawHtml;
+  }
+
+  const css = cssMap[currentStyle] || '';
+  return `<style>${css}</style><div class="markdown-body">\n${rawHtml}\n</div>`;
 }
 
 function parseProblems(source) {
@@ -133,9 +167,11 @@ function parseProblems(source) {
       ),
     );
 
+    const finalHtml = postProcessHtml(html);
+
     return {
       title,
-      code: generateConsoleCode(html, { ...params, title }),
+      code: generateConsoleCode(finalHtml, { ...params, title }),
     };
   });
 }
