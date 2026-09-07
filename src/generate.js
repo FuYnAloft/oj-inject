@@ -11,11 +11,15 @@ function generateInjectScript(html) {
 
 export function generateConsoleCode(html, params = {}) {
     const paramsFill = Object.entries(params)
-        .map(([key, value]) => `document.querySelector('input[name="${key}"]').value = ${JSON.stringify(value)};`)
+        .map(([key, value]) => `setVal('${key}', ${JSON.stringify(value)});`)
         .join('\n');
     const inject = generateInjectScript(html)
 
-    return `${paramsFill}
+    return `const setVal = (name, val) => {
+  const el = document.querySelector('[name="' + name + '"]');
+  if (el) el.value = val;
+};
+${paramsFill}
 const ed = tinymce.get('editor'); 
 ed.getContent = () => "${inject}";
 ed.setContent("<p>描述已注入，直接提交保存即可。</p>");`
