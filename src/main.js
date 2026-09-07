@@ -24,6 +24,10 @@ document.querySelector('#app').innerHTML = `
       <button id="reset-btn">重置</button>
     </div>
     <section id="result-list"></section>
+    
+    <section class="guide-section">
+      <img src="${import.meta.env.BASE_URL}guide.png" alt="使用指南" class="guide-img" />
+    </section>
   </main>
   <dialog id="code-dialog">
     <textarea id="dialog-code" readonly></textarea>

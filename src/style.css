@@ -93,3 +93,22 @@ button.primary {
   min-height: 320px;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
+
+.guide-section {
+  margin-top: 32px;
+  text-align: center;
+}
+
+.guide-section h2 {
+  margin-bottom: 16px;
+  font-size: 1.25rem;
+  color: #334155;
+}
+
+.guide-img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e2e8f0;
+}
