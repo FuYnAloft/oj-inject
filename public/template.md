@@ -1,9 +1,9 @@
 # 示例题目一
 
 ---
-timeLimit: 1000 # 时间限制，单位为ms
-caseTimeLimit: 100 # 单个测试用例时间限制，单位为ms，可不填
-memoryLimit: 65536 # 内存限制，单位为kb
+timeLimit: 1000 # 时间限制，单位为ms。
+caseTimeLimit: 100 # 单个测试用例时间限制，单位为ms。如不需要限制此项，删掉此行。
+memoryLimit: 65536 # 内存限制，单位为kb。
 ---
 
 ## 描述
@@ -38,4 +38,4 @@ memoryLimit: 65536 # 内存限制，单位为kb
 
 # 示例题目二
 
-（略）
+（题目描述啥都不写也行）
