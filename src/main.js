@@ -8,6 +8,8 @@ import remarkRehype from 'remark-rehype';
 import { generateConsoleCode } from './generate.js';
 import { unified } from 'unified';
 import './style.css';
+import Toastify from 'toastify-js';
+import 'toastify-js/src/toastify.css';
 
 const initialMarkdown = await fetch(`${import.meta.env.BASE_URL}template.md`).then((res) => res.text());
 const parser = unified().use(remarkParse).use(remarkGfm).use(remarkFrontmatter, ['yaml']);
@@ -35,6 +37,22 @@ const dialogEl = document.querySelector('#code-dialog');
 const dialogCodeEl = document.querySelector('#dialog-code');
 
 inputEl.value = initialMarkdown;
+
+function showToast(text, isError = false) {
+  Toastify({
+    text,
+    duration: 2500,
+    gravity: 'bottom',
+    position: 'center',
+    stopOnFocus: true,
+    style: {
+      background: isError ? '#ef4444' : '#10b981',
+      borderRadius: '8px',
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+      fontSize: '14px',
+    },
+  }).showToast();
+}
 
 function parseProblems(source) {
   const tree = parser.parse(source);
@@ -119,9 +137,9 @@ function renderResults(items) {
       const code = items[Number(button.dataset.index)].code;
       try {
         await navigator.clipboard.writeText(code);
-        alert('请复制到题目编辑页面的控制台执行');
+        showToast('已复制！请粘贴到题目编辑页面的控制台执行');
       } catch {
-        alert('复制失败，请使用“展示”按钮手动复制');
+        showToast('复制失败，请使用“展示”按钮手动复制', true);
       }
     });
   });
