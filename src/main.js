@@ -45,6 +45,9 @@ document.querySelector('#app').innerHTML = `
         <option value="github">Github</option>
         <option value="github-tweaked">Github 微调</option>
       </select>
+      <label for="widening-input" style="margin-left: 12px;">题目描述加宽</label>
+      <input id="widening-input" type="number" step="1" style="width: 50px;" />
+      <span>px</span>
     </div>
     <div class="actions">
       <button id="generate-btn" class="primary">生成脚本</button>
@@ -64,6 +67,7 @@ document.querySelector('#app').innerHTML = `
 
 const inputEl = document.querySelector('#markdown-input');
 const styleSelectEl = document.querySelector('#style-select');
+const wideningInputEl = document.querySelector('#widening-input');
 const resultListEl = document.querySelector('#result-list');
 const dialogEl = document.querySelector('#code-dialog');
 const dialogCodeEl = document.querySelector('#dialog-code');
@@ -77,6 +81,11 @@ inputEl.addEventListener('input', () => {
 styleSelectEl.value = localStorage.getItem('oj-inject-style') || 'github-tweaked';
 styleSelectEl.addEventListener('change', () => {
   localStorage.setItem('oj-inject-style', styleSelectEl.value);
+});
+
+wideningInputEl.value = localStorage.getItem('oj-inject-widening') || '0';
+wideningInputEl.addEventListener('input', () => {
+  localStorage.setItem('oj-inject-widening', wideningInputEl.value);
 });
 
 function showToast(text, isError = false) {
@@ -96,13 +105,35 @@ function showToast(text, isError = false) {
 }
 
 function postProcessHtml(rawHtml) {
+  let html = rawHtml
+
   const currentStyle = document.querySelector('#style-select')?.value || 'github-tweaked';
-  if (currentStyle === 'none') {
-    return rawHtml;
+  if (currentStyle !== 'none') {
+    const css = cssMap[currentStyle] || '';
+    html = `<style>${css}</style><div class="markdown-body">\n${html}\n</div>`;
   }
 
-  const css = cssMap[currentStyle] || '';
-  return `<style>${css}</style><div class="markdown-body">\n${rawHtml}\n</div>`;
+
+  const widening = Number(localStorage.getItem('oj-inject-widening') || '0');
+  if (widening !== 0) {
+    const style = `<style>
+:root {
+  --oj-inject-widening: ${widening}px;
+}
+.problem-page {
+    width: calc(670px + var(--oj-inject-widening));
+}
+#pageTitle {
+    width: calc(932px + var(--oj-inject-widening));
+}
+#pagebody .wrapper{
+    width: calc(960px + var(--oj-inject-widening));
+}
+</style>`
+    html = style + html;
+  }
+
+  return html;
 }
 
 async function parseProblems(source) {
