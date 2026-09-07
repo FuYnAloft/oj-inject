@@ -151,7 +151,7 @@ async function parseProblems(source) {
         }
 
         const defaultFields = ['input', 'output', 'sampleInput', 'sampleOutput', 'hint', 'source'];
-        const DEFAULT_TEXT = '（不需要写，写了也没用）';
+        const DEFAULT_TEXT = '\u200B'; // Zero-width space
 
         defaultFields.forEach((field) => {
           if (params[field] === undefined || params[field] === null) {
