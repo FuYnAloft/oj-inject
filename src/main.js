@@ -102,6 +102,15 @@ function parseProblems(source) {
       contentNodes.splice(removeFrom, removeTo - removeFrom + 1);
     }
 
+    const defaultFields = ['input', 'output', 'sampleInput', 'sampleOutput', 'hint', 'source'];
+    const DEFAULT_TEXT = '（不需要写，写了也没用）';
+
+    defaultFields.forEach((field) => {
+      if (params[field] === undefined || params[field] === null) {
+        params[field] = DEFAULT_TEXT;
+      }
+    });
+
     const html = String(
       htmlCompiler.stringify(
         htmlCompiler.runSync({

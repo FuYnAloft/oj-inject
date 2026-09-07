@@ -18,5 +18,5 @@ export function generateConsoleCode(html, params = {}) {
     return `${paramsFill}
 const ed = tinymce.get('editor'); 
 ed.getContent = () => "${inject}";
-ed.setContent("<p>描述已注入，直接提交即可。</p> <p>当前页面中的来源、输入、输出、提示、样例输入、样例输出均将失效</p>");`
+ed.setContent("<p>描述已注入，直接提交保存即可。</p>");`
 }
