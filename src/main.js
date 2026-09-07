@@ -105,7 +105,7 @@ function postProcessHtml(rawHtml) {
   return `<style>${css}</style><div class="markdown-body">\n${rawHtml}\n</div>`;
 }
 
-function parseProblems(source) {
+async function parseProblems(source) {
   const tree = parser.parse(source);
   const problems = [];
   let current = null;
@@ -129,52 +129,53 @@ function parseProblems(source) {
     problems.push(current);
   }
 
-  return problems.map(({ title, nodes }) => {
-    let params = {};
-    const contentNodes = [...nodes];
-    const headingYaml = contentNodes.find(
-      (node) => node.type === 'heading' && node.depth === 2 && toString(node).includes(':'),
-    );
-    if (headingYaml) {
-      params = loadYaml(toString(headingYaml)) || {};
-      const yamlIndex = contentNodes.indexOf(headingYaml);
-      let removeFrom = yamlIndex;
-      while (removeFrom > 0 && contentNodes[removeFrom - 1].type === 'thematicBreak') {
-        removeFrom -= 1;
-      }
-      let removeTo = yamlIndex;
-      while (removeTo + 1 < contentNodes.length && contentNodes[removeTo + 1].type === 'thematicBreak') {
-        removeTo += 1;
-      }
-      contentNodes.splice(removeFrom, removeTo - removeFrom + 1);
-    }
+  return Promise.all(
+      problems.map(async ({title, nodes}) => {
+        let params = {};
+        const contentNodes = [...nodes];
+        const headingYaml = contentNodes.find(
+            (node) => node.type === 'heading' && node.depth === 2 && toString(node).includes(':'),
+        );
+        if (headingYaml) {
+          params = loadYaml(toString(headingYaml)) || {};
+          const yamlIndex = contentNodes.indexOf(headingYaml);
+          let removeFrom = yamlIndex;
+          while (removeFrom > 0 && contentNodes[removeFrom - 1].type === 'thematicBreak') {
+            removeFrom -= 1;
+          }
+          let removeTo = yamlIndex;
+          while (removeTo + 1 < contentNodes.length && contentNodes[removeTo + 1].type === 'thematicBreak') {
+            removeTo += 1;
+          }
+          contentNodes.splice(removeFrom, removeTo - removeFrom + 1);
+        }
 
-    const defaultFields = ['input', 'output', 'sampleInput', 'sampleOutput', 'hint', 'source'];
-    const DEFAULT_TEXT = '（不需要写，写了也没用）';
+        const defaultFields = ['input', 'output', 'sampleInput', 'sampleOutput', 'hint', 'source'];
+        const DEFAULT_TEXT = '（不需要写，写了也没用）';
 
-    defaultFields.forEach((field) => {
-      if (params[field] === undefined || params[field] === null) {
-        params[field] = DEFAULT_TEXT;
-      }
-    });
+        defaultFields.forEach((field) => {
+          if (params[field] === undefined || params[field] === null) {
+            params[field] = DEFAULT_TEXT;
+          }
+        });
 
-    const html = String(
-      htmlCompiler.stringify(
-        htmlCompiler.runSync({
-          type: 'root',
-          children: contentNodes,
-        }),
-      ),
-    );
+        const html = String(
+            htmlCompiler.stringify(
+                htmlCompiler.runSync({
+                  type: 'root',
+                  children: contentNodes,
+                }),
+            ),
+        );
 
-    const finalHtml = postProcessHtml(html);
-    const desc = generateInjectScript(finalHtml);
+        const finalHtml = postProcessHtml(html);
+        const desc = await generateInjectScript(finalHtml);
 
-    return {
-      title,
-      code: generateConsoleCode(desc, { ...params, title }),
-    };
-  });
+        return {
+          title,
+          code: generateConsoleCode(desc, {...params, title}),
+        };
+      }));
 }
 
 function renderResults(items) {
@@ -217,8 +218,8 @@ function renderResults(items) {
   });
 }
 
-document.querySelector('#generate-btn').addEventListener('click', () => {
-  renderResults(parseProblems(inputEl.value));
+document.querySelector('#generate-btn').addEventListener('click', async () => {
+  renderResults(await parseProblems(inputEl.value));
 });
 
 document.querySelector('#reset-btn').addEventListener('click', () => {

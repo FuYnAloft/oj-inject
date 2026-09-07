@@ -1,13 +1,19 @@
-export function generateInjectScript(html) {
-  const encoder = new TextEncoder();
-  const bytes = encoder.encode(html);
+export async function generateInjectScript(html) {
+  const stream = new Blob([new TextEncoder().encode(html)])
+    .stream()
+    .pipeThrough(new CompressionStream('gzip'));
+
+  const buffer = await new Response(stream).arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+
   let binary = '';
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
+  const chunkSize = 8192;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
   }
   const base64 = btoa(binary);
 
-  return `<script>const s=document.currentScript,b64='${base64}';setTimeout(function(){const dl=s.closest('dl.problem-content');if(dl){const bin=atob(b64);const bytes=Uint8Array.from(bin,function(c){return c.charCodeAt(0)});dl.innerHTML=new TextDecoder().decode(bytes);}},0);<\/script>`;
+  return `<script>(async()=>{const s=document.currentScript,dl=s?.closest('dl.problem-content'),b='${base64}';if(!dl)return;const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const text=await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text();dl.innerHTML=text;})();<\/script>`;
 }
 
 export function generateConsoleCode(desc, params = {}) {
@@ -21,6 +27,6 @@ export function generateConsoleCode(desc, params = {}) {
 };
 ${paramsFill}
 const ed = tinymce.get('editor'); 
-ed.getContent = () => "${desc}";
+ed.getContent = () => ${JSON.stringify(desc)};
 ed.setContent("<p>描述已注入，直接提交保存即可。</p>");`
 }
