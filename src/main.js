@@ -125,8 +125,8 @@ function renderResults(items) {
       <article class="result-item">
         <strong>${title}</strong>
         <div class="item-actions">
-          <button data-action="copy" data-index="${idx}" title="复制">📋</button>
-          <button data-action="show" data-index="${idx}">展示</button>
+          <button data-action="copy" data-index="${idx}" title="复制">📋复制代码</button>
+          <button data-action="show" data-index="${idx}">显示代码</button>
         </div>
       </article>`,
     )
