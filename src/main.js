@@ -40,7 +40,11 @@ const resultListEl = document.querySelector('#result-list');
 const dialogEl = document.querySelector('#code-dialog');
 const dialogCodeEl = document.querySelector('#dialog-code');
 
-inputEl.value = initialMarkdown;
+inputEl.value = localStorage.getItem('oj-inject-markdown') || initialMarkdown;
+
+inputEl.addEventListener('input', () => {
+  localStorage.setItem('oj-inject-markdown', inputEl.value);
+});
 
 function showToast(text, isError = false) {
   Toastify({
@@ -173,6 +177,7 @@ document.querySelector('#generate-btn').addEventListener('click', () => {
 
 document.querySelector('#reset-btn').addEventListener('click', () => {
   if (!confirm('确认重置为模板内容？')) return;
+  localStorage.removeItem('oj-inject-markdown');
   inputEl.value = initialMarkdown;
   resultListEl.innerHTML = '';
 });
