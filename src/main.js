@@ -7,7 +7,7 @@ import remarkMath from 'remark-math';
 import rehypeKatex from "rehype-katex";
 import remarkParse from 'remark-parse';
 import remarkRehype from 'remark-rehype';
-import { generateConsoleCode } from './generate.js';
+import { generateConsoleCode, generateInjectScript } from './generate.js';
 import { unified } from 'unified';
 import './style.css';
 import Toastify from 'toastify-js';
@@ -168,10 +168,11 @@ function parseProblems(source) {
     );
 
     const finalHtml = postProcessHtml(html);
+    const desc = generateInjectScript(finalHtml);
 
     return {
       title,
-      code: generateConsoleCode(finalHtml, { ...params, title }),
+      code: generateConsoleCode(desc, { ...params, title }),
     };
   });
 }
