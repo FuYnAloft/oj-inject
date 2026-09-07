@@ -3,6 +3,8 @@ import { toString } from 'mdast-util-to-string';
 import rehypeStringify from 'rehype-stringify';
 import remarkFrontmatter from 'remark-frontmatter';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from "rehype-katex";
 import remarkParse from 'remark-parse';
 import remarkRehype from 'remark-rehype';
 import { generateConsoleCode } from './generate.js';
@@ -12,8 +14,15 @@ import Toastify from 'toastify-js';
 import 'toastify-js/src/toastify.css';
 
 const initialMarkdown = await fetch(`${import.meta.env.BASE_URL}template.md`).then((res) => res.text());
-const parser = unified().use(remarkParse).use(remarkGfm).use(remarkFrontmatter, ['yaml']);
-const htmlCompiler = unified().use(remarkRehype, { allowDangerousHtml: true }).use(rehypeStringify, { allowDangerousHtml: true });
+const parser = unified()
+    .use(remarkParse)
+    .use(remarkGfm)
+    .use(remarkFrontmatter, ['yaml'])
+    .use(remarkMath);
+const htmlCompiler = unified()
+    .use(remarkRehype, { allowDangerousHtml: true })
+    .use(rehypeKatex, { output: 'mathml' })
+    .use(rehypeStringify, { allowDangerousHtml: true });
 
 document.querySelector('#app').innerHTML = `
   <main class="container">

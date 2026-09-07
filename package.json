@@ -14,9 +14,11 @@
   "dependencies": {
     "js-yaml": "^5.4.1",
     "mdast-util-to-string": "^4.0.0",
+    "rehype-katex": "^7.0.1",
     "rehype-stringify": "^10.0.1",
     "remark-frontmatter": "^5.0.0",
     "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0",
     "remark-parse": "^11.0.0",
     "remark-rehype": "^11.1.2",
     "toastify-js": "^1.12.0",
