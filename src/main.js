@@ -1,6 +1,7 @@
 import { load as loadYaml } from 'js-yaml';
 import { toString } from 'mdast-util-to-string';
 import rehypeStringify from 'rehype-stringify';
+import remarkBreaks from 'remark-breaks';
 import remarkFrontmatter from 'remark-frontmatter';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -24,11 +25,20 @@ const cssMap = {
   'github-tweaked': githubTweakedCss,
 };
 
-const parser = unified()
-    .use(remarkParse)
-    .use(remarkGfm)
-    .use(remarkFrontmatter, ['yaml'])
-    .use(remarkMath);
+function createParser() {
+  const parser = unified()
+      .use(remarkParse)
+      .use(remarkGfm)
+      .use(remarkFrontmatter, ['yaml'])
+      .use(remarkMath);
+
+  if (config.singleLineBreak) {
+    parser.use(remarkBreaks);
+  }
+
+  return parser;
+}
+
 const htmlCompiler = unified()
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeKatex, { output: 'mathml' })
@@ -61,6 +71,10 @@ document.querySelector('#app').innerHTML = `
       <label for="widening-input" style="margin-left: 12px;">题目描述加宽</label>
       <input id="widening-input" type="number" step="1" style="width: 50px;" />
       <span>px</span>
+      <label style="margin-left: 12px;" title="普通单换行会转换为 &lt;br&gt;">
+        <input id="single-line-break-input" type="checkbox" />
+        单换行
+      </label>
     </div>
     <div class="actions">
       <button id="html-generate-btn">直接输入 HTML</button>
@@ -90,6 +104,7 @@ document.querySelector('#app').innerHTML = `
 const inputEl = document.querySelector('#markdown-input');
 const styleSelectEl = document.querySelector('#style-select');
 const wideningInputEl = document.querySelector('#widening-input');
+const singleLineBreakInputEl = document.querySelector('#single-line-break-input');
 const resultListEl = document.querySelector('#result-list');
 const htmlInputDialogEl = document.querySelector('#html-input-dialog');
 const htmlInputEl = document.querySelector('#html-input');
@@ -100,6 +115,7 @@ const CONFIG_KEY = 'oj-inject-config';
 const defaultConfig = {
   style: 'github-tweaked',
   widening: 0,
+  singleLineBreak: true,
 };
 
 let config;
@@ -131,6 +147,12 @@ styleSelectEl.addEventListener('change', () => {
 wideningInputEl.value = config.widening;
 wideningInputEl.addEventListener('input', () => {
   config.widening = Number(wideningInputEl.value) || 0;
+  saveConfig();
+});
+
+singleLineBreakInputEl.checked = config.singleLineBreak;
+singleLineBreakInputEl.addEventListener('change', () => {
+  config.singleLineBreak = singleLineBreakInputEl.checked;
   saveConfig();
 });
 
@@ -212,7 +234,8 @@ function postProcessHtml(rawHtml) {
 }
 
 async function parseProblems(source) {
-  const tree = parser.parse(source);
+  const parser = createParser();
+  const tree = parser.runSync(parser.parse(source));
   const problems = [];
   let current = null;
 
