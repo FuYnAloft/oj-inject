@@ -57,6 +57,36 @@ function withDefaultFields(params = {}) {
   return result;
 }
 
+let mermaidPromise;
+let mermaidDiagramId = 0;
+
+function loadMermaid() {
+  if (!mermaidPromise) {
+    mermaidPromise = import('mermaid').then(({default: mermaid}) => {
+      mermaid.initialize({startOnLoad: false});
+      return mermaid;
+    });
+  }
+  return mermaidPromise;
+}
+
+async function renderMermaidDiagrams(node) {
+  if (!Array.isArray(node.children)) return;
+
+  for (let index = 0; index < node.children.length; index += 1) {
+    const child = node.children[index];
+    if (child.type === 'code' && child.lang?.toLowerCase() === 'mermaid') {
+      const mermaid = await loadMermaid();
+      mermaidDiagramId += 1;
+      const id = `oj-inject-mermaid-${mermaidDiagramId}`;
+      const {svg} = await mermaid.render(id, child.value);
+      node.children[index] = {type: 'html', value: svg};
+      continue;
+    }
+    await renderMermaidDiagrams(child);
+  }
+}
+
 document.querySelector('#app').innerHTML = `
   <main class="container">
     <h1>OpenJudge 自由题目描述</h1>
@@ -236,6 +266,7 @@ function postProcessHtml(rawHtml) {
 async function parseProblems(source) {
   const parser = createParser();
   const tree = parser.runSync(parser.parse(source));
+  await renderMermaidDiagrams(tree);
   const problems = [];
   let current = null;
 
