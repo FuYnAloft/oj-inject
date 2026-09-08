@@ -72,6 +72,19 @@ button.primary {
   align-items: center;
 }
 
+.result-title {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.html-preview-button {
+  border: none;
+  background: transparent;
+  padding: 2px 4px;
+  line-height: 1;
+}
+
 .item-actions {
   display: flex;
   gap: 8px;

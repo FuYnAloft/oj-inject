@@ -248,6 +248,7 @@ async function parseProblems(source) {
 
         return {
           title,
+          finalHtml,
           code: generateConsoleCode(desc, {...params, title}),
         };
       }));
@@ -258,7 +259,10 @@ function renderResults(items) {
     .map(
       ({ title }, idx) => `
       <article class="result-item">
-        <strong>${title}</strong>
+        <div class="result-title">
+          <strong>${title}</strong>
+          <button class="html-preview-button" data-action="show-html" data-index="${idx}" title="显示HTML" aria-label="显示HTML">👁️</button>
+        </div>
         <div class="item-actions">
           <button data-action="copy" data-index="${idx}" title="复制">📋复制代码</button>
           <button data-action="show" data-index="${idx}">显示代码</button>
@@ -289,6 +293,15 @@ function renderResults(items) {
   resultListEl.querySelectorAll('button[data-action="show"]').forEach((button) => {
     button.addEventListener('click', () => {
       dialogCodeEl.value = items[Number(button.dataset.index)].code;
+      dialogEl.showModal();
+      dialogCodeEl.focus();
+      dialogCodeEl.select();
+    });
+  });
+
+  resultListEl.querySelectorAll('button[data-action="show-html"]').forEach((button) => {
+    button.addEventListener('click', () => {
+      dialogCodeEl.value = items[Number(button.dataset.index)].finalHtml;
       dialogEl.showModal();
       dialogCodeEl.focus();
       dialogCodeEl.select();
