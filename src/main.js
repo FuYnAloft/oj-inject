@@ -119,15 +119,22 @@ function postProcessHtml(rawHtml) {
     const style = `<style>
 :root {
   --oj-inject-widening: ${widening}px;
+  --oj-inject-stat-max-narrowing: 75px;
+  
+  --oj-inject-stat-narrowing: clamp(0px, var(--oj-inject-widening), var(--oj-inject-stat-max-narrowing));
+  --oj-inject-wrapper-delta: calc(var(--oj-inject-widening) - var(--oj-inject-stat-narrowing));
 }
 .problem-page {
     width: calc(670px + var(--oj-inject-widening));
 }
+.problem-statistics {
+    width: calc(234px - var(--oj-inject-stat-narrowing));
+}
 #pageTitle {
-    width: calc(932px + var(--oj-inject-widening));
+    width: calc(932px + var(--oj-inject-wrapper-delta));
 }
 #pagebody .wrapper{
-    width: calc(960px + var(--oj-inject-widening));
+    width: calc(960px + var(--oj-inject-wrapper-delta));
 }
 </style>`
     html = style + html;
