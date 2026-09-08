@@ -36,7 +36,7 @@ function createParser() {
   const parser = unified()
       .use(remarkParse)
       .use(remarkGfm)
-      .use(remarkFrontmatter, ['yaml'])
+      .use(remarkFrontmatter, [{type: 'yaml', marker: '-', anywhere: true}])
       .use(remarkMath);
 
   if (config.singleLineBreak) {
@@ -307,21 +307,10 @@ async function parseProblems(source) {
       problems.map(async ({title, nodes}) => {
         let params = {};
         const contentNodes = [...nodes];
-        const headingYaml = contentNodes.find(
-            (node) => node.type === 'heading' && node.depth === 2 && toString(node).includes(':'),
-        );
-        if (headingYaml) {
-          params = loadYaml(toString(headingYaml)) || {};
-          const yamlIndex = contentNodes.indexOf(headingYaml);
-          let removeFrom = yamlIndex;
-          while (removeFrom > 0 && contentNodes[removeFrom - 1].type === 'thematicBreak') {
-            removeFrom -= 1;
-          }
-          let removeTo = yamlIndex;
-          while (removeTo + 1 < contentNodes.length && contentNodes[removeTo + 1].type === 'thematicBreak') {
-            removeTo += 1;
-          }
-          contentNodes.splice(removeFrom, removeTo - removeFrom + 1);
+        const yamlIndex = contentNodes.findIndex((node) => node.type === 'yaml');
+        if (yamlIndex !== -1) {
+          params = loadYaml(contentNodes[yamlIndex].value) || {};
+          contentNodes.splice(yamlIndex, 1);
         }
 
         params = withDefaultFields(params);
