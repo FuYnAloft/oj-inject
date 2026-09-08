@@ -17,20 +17,21 @@
     border-radius: 6px;
 }
 
-/* OJ 样式覆盖（覆盖 OpenJudge 提供的样式，以更好看） */
+/* OJ 样式修复（覆盖 OpenJudge 提供的样式） */
 
 /* 确保 li 作为列表项正常渲染 marker */
 .markdown-body li {
-  display: list-item !important;
-  list-style: inherit !important;
+    display: list-item !important;
+    list-style: inherit !important;
 }
 
-/* 放大列表字体 */
+/* 修正列表字体 */
 .markdown-body table {
-  font-size: 14px;
+    font-size: 15px;
+    line-height: 1.7;
 }
 
 /* 覆盖题目页的列表左边距 */
 .markdown-body ol li {
-  margin-left: 0 !important;
+    margin-left: 0 !important;
 }

@@ -42,8 +42,8 @@ document.querySelector('#app').innerHTML = `
       <label for="style-select">样式：</label>
       <select id="style-select">
         <option value="none">无</option>
-        <option value="github">Github</option>
-        <option value="github-tweaked">Github 微调</option>
+        <option value="github">Github 原版</option>
+        <option value="github-tweaked">Github 优化</option>
       </select>
       <label for="widening-input" style="margin-left: 12px;">题目描述加宽</label>
       <input id="widening-input" type="number" step="1" style="width: 50px;" />
