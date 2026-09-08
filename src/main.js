@@ -72,20 +72,42 @@ const resultListEl = document.querySelector('#result-list');
 const dialogEl = document.querySelector('#code-dialog');
 const dialogCodeEl = document.querySelector('#dialog-code');
 
+const CONFIG_KEY = 'oj-inject-config';
+const defaultConfig = {
+  style: 'github-tweaked',
+  widening: 0,
+};
+
+let config;
+try {
+  config = {
+    ...defaultConfig,
+    ...JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}'),
+  };
+} catch {
+  config = {...defaultConfig};
+}
+
+function saveConfig() {
+  localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+}
+
 inputEl.value = localStorage.getItem('oj-inject-markdown') || initialMarkdown;
 
 inputEl.addEventListener('input', () => {
   localStorage.setItem('oj-inject-markdown', inputEl.value);
 });
 
-styleSelectEl.value = localStorage.getItem('oj-inject-style') || 'github-tweaked';
+styleSelectEl.value = config.style;
 styleSelectEl.addEventListener('change', () => {
-  localStorage.setItem('oj-inject-style', styleSelectEl.value);
+  config.style = styleSelectEl.value;
+  saveConfig();
 });
 
-wideningInputEl.value = localStorage.getItem('oj-inject-widening') || '0';
+wideningInputEl.value = config.widening;
 wideningInputEl.addEventListener('input', () => {
-  localStorage.setItem('oj-inject-widening', wideningInputEl.value);
+  config.widening = Number(wideningInputEl.value) || 0;
+  saveConfig();
 });
 
 function showToast(text, isError = false) {
@@ -114,7 +136,7 @@ function postProcessHtml(rawHtml) {
   }
 
 
-  const widening = Number(localStorage.getItem('oj-inject-widening') || '0');
+  const widening = config.widening;
   if (widening !== 0) {
     const style = `<style>
 :root {
