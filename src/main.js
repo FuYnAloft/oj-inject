@@ -34,6 +34,19 @@ const htmlCompiler = unified()
     .use(rehypeKatex, { output: 'mathml' })
     .use(rehypeStringify, { allowDangerousHtml: true });
 
+const DEFAULT_FIELDS = ['input', 'output', 'sampleInput', 'sampleOutput', 'hint', 'source'];
+const DEFAULT_TEXT = '\u200B'; // Zero-width space
+
+function withDefaultFields(params = {}) {
+  const result = {...params};
+  DEFAULT_FIELDS.forEach((field) => {
+    if (result[field] === undefined || result[field] === null) {
+      result[field] = DEFAULT_TEXT;
+    }
+  });
+  return result;
+}
+
 document.querySelector('#app').innerHTML = `
   <main class="container">
     <h1>OpenJudge 自由题目描述</h1>
@@ -50,6 +63,7 @@ document.querySelector('#app').innerHTML = `
       <span>px</span>
     </div>
     <div class="actions">
+      <button id="html-generate-btn">直接输入 HTML</button>
       <button id="generate-btn" class="primary">生成脚本</button>
       <button id="reset-btn">重置</button>
     </div>
@@ -59,6 +73,14 @@ document.querySelector('#app').innerHTML = `
       <img src="${import.meta.env.BASE_URL}guide.png" alt="使用指南" class="guide-img" />
     </section>
   </main>
+  <dialog id="html-input-dialog">
+    <h2>直接输入 HTML</h2>
+    <textarea id="html-input" placeholder="在这里输入 HTML"></textarea>
+    <div class="dialog-actions">
+      <button id="cancel-html-input">取消</button>
+      <button id="confirm-html-input">确定</button>
+    </div>
+  </dialog>
   <dialog id="code-dialog">
     <textarea id="dialog-code" readonly></textarea>
     <button id="close-dialog">关闭</button>
@@ -69,6 +91,8 @@ const inputEl = document.querySelector('#markdown-input');
 const styleSelectEl = document.querySelector('#style-select');
 const wideningInputEl = document.querySelector('#widening-input');
 const resultListEl = document.querySelector('#result-list');
+const htmlInputDialogEl = document.querySelector('#html-input-dialog');
+const htmlInputEl = document.querySelector('#html-input');
 const dialogEl = document.querySelector('#code-dialog');
 const dialogCodeEl = document.querySelector('#dialog-code');
 
@@ -139,6 +163,13 @@ async function copyCode(code) {
   } catch {
     showToast('复制失败，请使用“展示”按钮手动复制', 'error');
   }
+}
+
+function showCode(code) {
+  dialogCodeEl.value = code;
+  dialogEl.showModal();
+  dialogCodeEl.focus();
+  dialogCodeEl.select();
 }
 
 function postProcessHtml(rawHtml) {
@@ -225,14 +256,7 @@ async function parseProblems(source) {
           contentNodes.splice(removeFrom, removeTo - removeFrom + 1);
         }
 
-        const defaultFields = ['input', 'output', 'sampleInput', 'sampleOutput', 'hint', 'source'];
-        const DEFAULT_TEXT = '\u200B'; // Zero-width space
-
-        defaultFields.forEach((field) => {
-          if (params[field] === undefined || params[field] === null) {
-            params[field] = DEFAULT_TEXT;
-          }
-        });
+        params = withDefaultFields(params);
 
         const html = String(
             htmlCompiler.stringify(
@@ -292,19 +316,13 @@ function renderResults(items) {
 
   resultListEl.querySelectorAll('button[data-action="show"]').forEach((button) => {
     button.addEventListener('click', () => {
-      dialogCodeEl.value = items[Number(button.dataset.index)].code;
-      dialogEl.showModal();
-      dialogCodeEl.focus();
-      dialogCodeEl.select();
+      showCode(items[Number(button.dataset.index)].code);
     });
   });
 
   resultListEl.querySelectorAll('button[data-action="show-html"]').forEach((button) => {
     button.addEventListener('click', () => {
-      dialogCodeEl.value = items[Number(button.dataset.index)].finalHtml;
-      dialogEl.showModal();
-      dialogCodeEl.focus();
-      dialogCodeEl.select();
+      showCode(items[Number(button.dataset.index)].finalHtml);
     });
   });
 
@@ -315,12 +333,7 @@ function renderResults(items) {
 
   const showRestoreBtn = resultListEl.querySelector('button[data-action="show-restore"]');
   if (showRestoreBtn) {
-    showRestoreBtn.addEventListener('click', () => {
-      dialogCodeEl.value = restoreConsoleCode;
-      dialogEl.showModal();
-      dialogCodeEl.focus();
-      dialogCodeEl.select();
-    });
+    showRestoreBtn.addEventListener('click', () => showCode(restoreConsoleCode));
   }
 }
 
@@ -344,6 +357,23 @@ document.querySelector('#reset-btn').addEventListener('click', () => {
   localStorage.removeItem('oj-inject-markdown');
   inputEl.value = initialMarkdown;
   renderResults([]);
+});
+
+document.querySelector('#html-generate-btn').addEventListener('click', () => {
+  htmlInputDialogEl.showModal();
+  htmlInputEl.focus();
+});
+
+document.querySelector('#cancel-html-input').addEventListener('click', () => {
+  htmlInputDialogEl.close();
+});
+
+document.querySelector('#confirm-html-input').addEventListener('click', async () => {
+  const desc = await generateInjectScript(htmlInputEl.value);
+  const code = generateConsoleCode(desc, withDefaultFields());
+  htmlInputDialogEl.close();
+  showCode(code);
+  await copyCode(code);
 });
 
 document.querySelector('#close-dialog').addEventListener('click', () => dialogEl.close());
