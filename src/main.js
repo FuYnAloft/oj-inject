@@ -21,15 +21,17 @@ import 'toastify-js/src/toastify.css';
 
 const highlightCss = rawHighlightCss.replace(/(?:pre )?code\.hljs\s*\{[^}]*\}\s*/g, '');
 
-const [initialMarkdown, githubCss, githubTweakedCss] = await Promise.all([
+const [initialMarkdown, githubCss, githubTweakedCss, githubTweakedCompactCss] = await Promise.all([
   fetch(`${import.meta.env.BASE_URL}template.md`).then((res) => res.text()),
   fetch(`${import.meta.env.BASE_URL}styles/github-markdown.css`).then((res) => res.text()),
   fetch(`${import.meta.env.BASE_URL}styles/github-markdown-tweaked.css`).then((res) => res.text()),
+  fetch(`${import.meta.env.BASE_URL}styles/github-markdown-tweaked-compact.css`).then((res) => res.text()),
 ]);
 
 const cssMap = {
   github: githubCss,
   'github-tweaked': githubTweakedCss,
+  'github-tweaked-compact': githubTweakedCompactCss,
 };
 
 function createParser() {
@@ -108,6 +110,7 @@ document.querySelector('#app').innerHTML = `
         <option value="none">无</option>
         <option value="github">Github 原版</option>
         <option value="github-tweaked">Github 优化</option>
+        <option value="github-tweaked-compact">Github 优化 紧凑</option>
       </select>
       <label for="widening-input" style="margin-left: 12px;">题目描述加宽</label>
       <input id="widening-input" type="number" step="1" style="width: 50px;" />
