@@ -1,5 +1,10 @@
 import { load as loadYaml } from 'js-yaml';
 import { toString } from 'mdast-util-to-string';
+import c from 'highlight.js/lib/languages/c';
+import cpp from 'highlight.js/lib/languages/cpp';
+import rawHighlightCss from 'highlight.js/styles/github.css?raw';
+import python from 'highlight.js/lib/languages/python';
+import rehypeHighlight from 'rehype-highlight';
 import rehypeStringify from 'rehype-stringify';
 import remarkBreaks from 'remark-breaks';
 import remarkFrontmatter from 'remark-frontmatter';
@@ -13,6 +18,8 @@ import { unified } from 'unified';
 import './style.css';
 import Toastify from 'toastify-js';
 import 'toastify-js/src/toastify.css';
+
+const highlightCss = rawHighlightCss.replace(/(?:pre )?code\.hljs\s*\{[^}]*\}\s*/g, '');
 
 const [initialMarkdown, githubCss, githubTweakedCss] = await Promise.all([
   fetch(`${import.meta.env.BASE_URL}template.md`).then((res) => res.text()),
@@ -42,6 +49,10 @@ function createParser() {
 const htmlCompiler = unified()
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeKatex, { output: 'mathml' })
+    .use(rehypeHighlight, {
+      languages: {c, cpp, python},
+      detect: false,
+    })
     .use(rehypeStringify, { allowDangerousHtml: true });
 
 const DEFAULT_FIELDS = ['input', 'output', 'sampleInput', 'sampleOutput', 'hint', 'source'];
@@ -226,11 +237,14 @@ function showCode(code) {
 
 function postProcessHtml(rawHtml) {
   let html = rawHtml
+  const syntaxStyle = html.includes('class="hljs') ? `<style>${highlightCss}</style>` : '';
 
   const currentStyle = document.querySelector('#style-select')?.value || 'github-tweaked';
   if (currentStyle !== 'none') {
     const css = cssMap[currentStyle] || '';
-    html = `<style>${css}</style><div class="markdown-body">\n${html}\n</div>`;
+    html = `<style>${css}</style>${syntaxStyle}<div class="markdown-body">\n${html}\n</div>`;
+  } else {
+    html = syntaxStyle + html;
   }
 
 
