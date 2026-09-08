@@ -110,7 +110,13 @@ wideningInputEl.addEventListener('input', () => {
   saveConfig();
 });
 
-function showToast(text, isError = false) {
+function showToast(text, type = 'success') {
+  const backgroundColors = {
+    success: '#10b981',
+    error: '#ef4444',
+    info: '#3b82f6',
+  };
+
   Toastify({
     text,
     duration: 2500,
@@ -118,12 +124,21 @@ function showToast(text, isError = false) {
     position: 'center',
     stopOnFocus: true,
     style: {
-      background: isError ? '#ef4444' : '#10b981',
+      background: backgroundColors[type],
       borderRadius: '8px',
       boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
       fontSize: '14px',
     },
   }).showToast();
+}
+
+async function copyCode(code) {
+  try {
+    await navigator.clipboard.writeText(code);
+    showToast('已复制！请粘贴到题目编辑页面的控制台执行');
+  } catch {
+    showToast('复制失败，请使用“展示”按钮手动复制', 'error');
+  }
 }
 
 function postProcessHtml(rawHtml) {
@@ -265,14 +280,9 @@ function renderResults(items) {
 
   // 绑定普通题目项的事件
   resultListEl.querySelectorAll('button[data-action="copy"]').forEach((button) => {
-    button.addEventListener('click', async () => {
+    button.addEventListener('click', () => {
       const code = items[Number(button.dataset.index)].code;
-      try {
-        await navigator.clipboard.writeText(code);
-        showToast('已复制！请粘贴到题目编辑页面的控制台执行');
-      } catch {
-        showToast('复制失败，请使用“展示”按钮手动复制', true);
-      }
+      copyCode(code);
     });
   });
 
@@ -287,14 +297,7 @@ function renderResults(items) {
 
   const copyRestoreBtn = resultListEl.querySelector('button[data-action="copy-restore"]');
   if (copyRestoreBtn) {
-    copyRestoreBtn.addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText(restoreConsoleCode);
-        showToast('已复制！请粘贴到题目编辑页面的控制台执行');
-      } catch {
-        showToast('复制失败，请使用“展示”按钮手动复制', true);
-      }
-    });
+    copyRestoreBtn.addEventListener('click', () => copyCode(restoreConsoleCode));
   }
 
   const showRestoreBtn = resultListEl.querySelector('button[data-action="show-restore"]');
@@ -310,10 +313,17 @@ function renderResults(items) {
 
 document.querySelector('#generate-btn').addEventListener('click', async () => {
   const problems = await parseProblems(inputEl.value);
-  if (problems.length === 0) {
-    showToast('未找到题目（请检查一级标题 #）', true);
-  }
   renderResults(problems);
+
+  if (problems.length === 0) {
+    showToast('未找到题目（请检查一级标题 #）', 'error');
+    return;
+  }
+
+  showToast('生成成功！', 'info');
+  if (problems.length === 1) {
+    await copyCode(problems[0].code);
+  }
 });
 
 document.querySelector('#reset-btn').addEventListener('click', () => {
