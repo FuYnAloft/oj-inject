@@ -26,6 +26,17 @@ h1 {
   gap: 12px;
 }
 
+.config-bar {
+  display: flex;
+  align-items: center;
+}
+
+.strip-oj-remove-control {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
 #markdown-input {
   width: 100%;
   min-height: 360px;

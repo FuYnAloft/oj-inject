@@ -7,6 +7,7 @@ import python from 'highlight.js/lib/languages/python';
 import rehypeHighlight from 'rehype-highlight';
 import rehypeStringify from 'rehype-stringify';
 import remarkBreaks from 'remark-breaks';
+import remarkDirective from 'remark-directive';
 import remarkFrontmatter from 'remark-frontmatter';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -39,7 +40,8 @@ function createParser() {
       .use(remarkParse)
       .use(remarkGfm)
       .use(remarkFrontmatter, [{type: 'yaml', marker: '-', anywhere: true}])
-      .use(remarkMath);
+      .use(remarkMath)
+      .use(remarkDirective);
 
   if (config.singleLineBreak) {
     parser.use(remarkBreaks);
@@ -100,6 +102,20 @@ async function renderMermaidDiagrams(node) {
   }
 }
 
+function processOjRemoveDirectives(node, shouldRemove) {
+  if (!Array.isArray(node.children)) return;
+
+  node.children = node.children.flatMap((child) => {
+    if (child.type === 'containerDirective' && child.name === 'oj-remove') {
+      if (shouldRemove) return [];
+      processOjRemoveDirectives(child, false);
+      return child.children;
+    }
+    processOjRemoveDirectives(child, shouldRemove);
+    return [child];
+  });
+}
+
 document.querySelector('#app').innerHTML = `
   <main class="container">
     <h1>OpenJudge 自由题目描述</h1>
@@ -119,6 +135,13 @@ document.querySelector('#app').innerHTML = `
         <input id="single-line-break-input" type="checkbox" />
         单换行
       </label>
+      <div class="strip-oj-remove-control">
+        <label>
+          <input id="strip-oj-remove-input" type="checkbox" />
+          剔除标记内容
+        </label>
+        <span class="tooltip-icon" data-tooltip="剔除所有 :::oj-remove 容器及其内容">ⓘ</span>
+      </div>
     </div>
     <div class="actions">
       <button id="html-generate-btn">直接输入 HTML</button>
@@ -149,6 +172,7 @@ const inputEl = document.querySelector('#markdown-input');
 const styleSelectEl = document.querySelector('#style-select');
 const wideningInputEl = document.querySelector('#widening-input');
 const singleLineBreakInputEl = document.querySelector('#single-line-break-input');
+const stripOjRemoveInputEl = document.querySelector('#strip-oj-remove-input');
 const resultListEl = document.querySelector('#result-list');
 const htmlInputDialogEl = document.querySelector('#html-input-dialog');
 const htmlInputEl = document.querySelector('#html-input');
@@ -160,6 +184,7 @@ const defaultConfig = {
   style: 'github-tweaked',
   widening: 0,
   singleLineBreak: true,
+  stripOjRemove: true,
 };
 
 let config;
@@ -197,6 +222,12 @@ wideningInputEl.addEventListener('input', () => {
 singleLineBreakInputEl.checked = config.singleLineBreak;
 singleLineBreakInputEl.addEventListener('change', () => {
   config.singleLineBreak = singleLineBreakInputEl.checked;
+  saveConfig();
+});
+
+stripOjRemoveInputEl.checked = config.stripOjRemove;
+stripOjRemoveInputEl.addEventListener('change', () => {
+  config.stripOjRemove = stripOjRemoveInputEl.checked;
   saveConfig();
 });
 
@@ -283,6 +314,7 @@ function postProcessHtml(rawHtml) {
 async function parseProblems(source) {
   const parser = createParser();
   const tree = parser.runSync(parser.parse(source));
+  processOjRemoveDirectives(tree, config.stripOjRemove);
   await renderMermaidDiagrams(tree);
   const problems = [];
   let current = null;
