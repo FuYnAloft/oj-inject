@@ -3,9 +3,9 @@ export const PAYLOAD_FIELDS = ['input', 'output', 'sampleInput', 'sampleOutput']
 const encoder = new TextEncoder();
 
 export const DESCRIPTION = '<p>题目描述加载中。如果持续看到此说明，请确认浏览器没有禁用 JavaScript，并查看是否有加载错误。</p>' +
-  '<p>本题由 <a href="https://github.com/FuYnAloft/oj-inject">OJ Inject（FuYnAloft/oj-inject）</a> 生成。</p>' +
-  '<p>无需浏览器也可从本页 HTML 提取题面和源码：查找 type="application/x-oj-inject-data" 的四个 script 数据节点，按 data-part="0" 至 "3" 排序拼接文本，再依次进行 Base64 解码、gzip 解压和 UTF-8 解码，即得到 HTML 题面。查找 type="application/x-oj-inject-source" 的 script 数据节点，对文本做同样的解码，即得到 Markdown 原文（直接 HTML 模式则是 HTML 原文）；data-format 表示源码格式。启用剔除时，保存的 Markdown 已移除 oj-remove 容器及内容。</p>' +
-  '<p>也可以从仓库下载 public/extract.mjs，用 Node.js 执行：<code>node extract.mjs page.html recovered</code>，输出 recovered.html 和 recovered.md（HTML 模式输出 recovered.source.html）。适用于服务器返回的页面源码，以及保留数据节点的渲染后 HTML；页面必须包含完整数据。</p>';
+  '<p>本题使用 <a href="https://github.com/FuYnAloft/oj-inject">OJ Inject（FuYnAloft/oj-inject）</a> 构建。</p>' +
+  '<p>无需浏览器也可从本页 HTML 提取题面和源码：查找 type="application/x-oj-inject-data" 的四个 script 数据节点，按 data-part="0" 至 "3" 排序拼接文本，再依次进行 Base64 解码、gzip 解压和 UTF-8 解码，即得到 HTML 题面。查找 type="application/x-oj-inject-source" 的 script 数据节点，对文本做同样的解码，即得到 Markdown 原文（或 HTML 原文，data-format 表示源码格式）。</p>' +
+  '<p>也可以从上方的仓库下载 public/extract.mjs，用 Node.js 执行：<code>node extract.mjs page.html recovered</code>，输出 recovered.html 和 recovered.md（或 recovered.source.html）。适用于服务器返回的页面源码，以及保留数据节点的渲染后 HTML。</p>';
 
 export async function compressToBase64(text) {
   const stream = new Blob([encoder.encode(text)]).stream().pipeThrough(new CompressionStream('gzip'));
