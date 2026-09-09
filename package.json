@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "test": "node tests/generation.test.js",
     "build": "vite build",
     "preview": "vite preview"
   },

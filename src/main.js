@@ -1,21 +1,6 @@
-import { load as loadYaml } from 'js-yaml';
-import { toString } from 'mdast-util-to-string';
-import c from 'highlight.js/lib/languages/c';
-import cpp from 'highlight.js/lib/languages/cpp';
 import rawHighlightCss from 'highlight.js/styles/github.css?raw';
-import python from 'highlight.js/lib/languages/python';
-import rehypeHighlight from 'rehype-highlight';
-import rehypeStringify from 'rehype-stringify';
-import remarkBreaks from 'remark-breaks';
-import remarkDirective from 'remark-directive';
-import remarkFrontmatter from 'remark-frontmatter';
-import remarkGfm from 'remark-gfm';
-import remarkMath from 'remark-math';
-import rehypeKatex from "rehype-katex";
-import remarkParse from 'remark-parse';
-import remarkRehype from 'remark-rehype';
-import { generateConsoleCode, generateInjectScript, restoreConsoleCode } from './generate.js';
-import { unified } from 'unified';
+import {parseProblems} from './markdown.js';
+import {generateProblem} from './generate.js';
 import './style.css';
 import Toastify from 'toastify-js';
 import 'toastify-js/src/toastify.css';
@@ -34,87 +19,6 @@ const cssMap = {
   'github-tweaked': githubTweakedCss,
   'github-tweaked-compact': githubTweakedCompactCss,
 };
-
-function createParser() {
-  const parser = unified()
-      .use(remarkParse)
-      .use(remarkGfm)
-      .use(remarkFrontmatter, [{type: 'yaml', marker: '-', anywhere: true}])
-      .use(remarkMath)
-      .use(remarkDirective);
-
-  if (config.singleLineBreak) {
-    parser.use(remarkBreaks);
-  }
-
-  return parser;
-}
-
-const htmlCompiler = unified()
-    .use(remarkRehype, { allowDangerousHtml: true })
-    .use(rehypeKatex, { output: 'mathml' })
-    .use(rehypeHighlight, {
-      languages: {c, cpp, python},
-      detect: false,
-    })
-    .use(rehypeStringify, { allowDangerousHtml: true });
-
-const DEFAULT_FIELDS = ['input', 'output', 'sampleInput', 'sampleOutput', 'hint', 'source'];
-const DEFAULT_TEXT = '\u200B'; // Zero-width space
-
-function withDefaultFields(params = {}) {
-  const result = {...params};
-  DEFAULT_FIELDS.forEach((field) => {
-    if (result[field] === undefined || result[field] === null) {
-      result[field] = DEFAULT_TEXT;
-    }
-  });
-  return result;
-}
-
-let mermaidPromise;
-let mermaidDiagramId = 0;
-
-function loadMermaid() {
-  if (!mermaidPromise) {
-    mermaidPromise = import('mermaid').then(({default: mermaid}) => {
-      mermaid.initialize({startOnLoad: false});
-      return mermaid;
-    });
-  }
-  return mermaidPromise;
-}
-
-async function renderMermaidDiagrams(node) {
-  if (!Array.isArray(node.children)) return;
-
-  for (let index = 0; index < node.children.length; index += 1) {
-    const child = node.children[index];
-    if (child.type === 'code' && child.lang?.toLowerCase() === 'mermaid') {
-      const mermaid = await loadMermaid();
-      mermaidDiagramId += 1;
-      const id = `oj-inject-mermaid-${mermaidDiagramId}`;
-      const {svg} = await mermaid.render(id, child.value);
-      node.children[index] = {type: 'html', value: svg};
-      continue;
-    }
-    await renderMermaidDiagrams(child);
-  }
-}
-
-function processOjRemoveDirectives(node, shouldRemove) {
-  if (!Array.isArray(node.children)) return;
-
-  node.children = node.children.flatMap((child) => {
-    if (child.type === 'containerDirective' && child.name === 'oj-remove') {
-      if (shouldRemove) return [];
-      processOjRemoveDirectives(child, false);
-      return child.children;
-    }
-    processOjRemoveDirectives(child, shouldRemove);
-    return [child];
-  });
-}
 
 document.querySelector('#app').innerHTML = `
   <main class="container">
@@ -269,107 +173,6 @@ function showCode(code) {
   dialogCodeEl.select();
 }
 
-function postProcessHtml(rawHtml) {
-  let html = rawHtml
-  const syntaxStyle = html.includes('class="hljs') ? `<style>${highlightCss}</style>` : '';
-
-  const currentStyle = document.querySelector('#style-select')?.value || 'github-tweaked';
-  if (currentStyle !== 'none') {
-    const css = cssMap[currentStyle] || '';
-    html = `<style>${css}</style>${syntaxStyle}<div class="markdown-body">\n${html}\n</div>`;
-  } else {
-    html = syntaxStyle + html;
-  }
-
-
-  const widening = config.widening;
-  if (widening !== 0) {
-    const style = `<style>
-:root {
-  --oj-inject-widening: ${widening}px;
-  --oj-inject-stat-max-narrowing: 75px;
-  
-  --oj-inject-stat-narrowing: clamp(0px, var(--oj-inject-widening), var(--oj-inject-stat-max-narrowing));
-  --oj-inject-wrapper-delta: calc(var(--oj-inject-widening) - var(--oj-inject-stat-narrowing));
-}
-.problem-page {
-    width: calc(670px + var(--oj-inject-widening));
-}
-.problem-statistics {
-    width: calc(234px - var(--oj-inject-stat-narrowing));
-}
-#pageTitle {
-    width: calc(932px + var(--oj-inject-wrapper-delta));
-}
-#pagebody .wrapper{
-    width: calc(960px + var(--oj-inject-wrapper-delta));
-}
-</style>`
-    html = style + html;
-  }
-
-  return html;
-}
-
-async function parseProblems(source) {
-  const parser = createParser();
-  const tree = parser.runSync(parser.parse(source));
-  processOjRemoveDirectives(tree, config.stripOjRemove);
-  await renderMermaidDiagrams(tree);
-  const problems = [];
-  let current = null;
-
-  for (const node of tree.children) {
-    if (node.type === 'heading' && node.depth === 1) {
-      if (current) {
-        problems.push(current);
-      }
-      current = {
-        title: toString(node).trim(),
-        nodes: [],
-      };
-      continue;
-    }
-    if (current) {
-      current.nodes.push(node);
-    }
-  }
-  if (current) {
-    problems.push(current);
-  }
-
-  return Promise.all(
-      problems.map(async ({title, nodes}) => {
-        let params = {};
-        const contentNodes = [...nodes];
-        const yamlIndex = contentNodes.findIndex((node) => node.type === 'yaml');
-        if (yamlIndex !== -1) {
-          params = loadYaml(contentNodes[yamlIndex].value) || {};
-          contentNodes.splice(yamlIndex, 1);
-        }
-
-        params = withDefaultFields(params);
-
-        const html = String(
-            htmlCompiler.stringify(
-                htmlCompiler.runSync({
-                  type: 'root',
-                  children: contentNodes,
-                }),
-            ),
-        );
-
-        const finalHtml = postProcessHtml(html);
-        const desc = await generateInjectScript(finalHtml);
-
-        return {
-          title,
-          finalHtml,
-          code: generateConsoleCode(desc, {...params, title}),
-        };
-      }));
-}
-
 function renderResults(items) {
   const problemHtml = items
     .map(
@@ -387,16 +190,7 @@ function renderResults(items) {
     )
     .join('');
 
-  const restoreHtml = `
-    <article class="result-item">
-      <strong>恢复脚本 <span class="tooltip-icon" data-tooltip="恢复曾经注入的题目描述">ⓘ</span></strong>
-      <div class="item-actions">
-        <button data-action="copy-restore" title="复制">📋复制代码</button>
-        <button data-action="show-restore">显示代码</button>
-      </div>
-    </article>`;
-
-  resultListEl.innerHTML = problemHtml + restoreHtml;
+  resultListEl.innerHTML = problemHtml;
 
   // 绑定普通题目项的事件
   resultListEl.querySelectorAll('button[data-action="copy"]').forEach((button) => {
@@ -418,29 +212,25 @@ function renderResults(items) {
     });
   });
 
-  const copyRestoreBtn = resultListEl.querySelector('button[data-action="copy-restore"]');
-  if (copyRestoreBtn) {
-    copyRestoreBtn.addEventListener('click', () => copyCode(restoreConsoleCode));
-  }
-
-  const showRestoreBtn = resultListEl.querySelector('button[data-action="show-restore"]');
-  if (showRestoreBtn) {
-    showRestoreBtn.addEventListener('click', () => showCode(restoreConsoleCode));
-  }
 }
 
-document.querySelector('#generate-btn').addEventListener('click', async () => {
-  const problems = await parseProblems(inputEl.value);
-  renderResults(problems);
-
-  if (problems.length === 0) {
-    showToast('未找到题目（请检查一级标题 #）', 'error');
-    return;
-  }
-
-  showToast('生成成功！', 'info');
-  if (problems.length === 1) {
-    await copyCode(problems[0].code);
+document.querySelector('#generate-btn').addEventListener('click', async (event) => {
+  const button = event.currentTarget;
+  button.disabled = true;
+  renderResults([]);
+  try {
+    const problems = await parseProblems(inputEl.value, {...config}, cssMap, highlightCss);
+    renderResults(problems);
+    if (problems.length === 0) {
+      showToast('未找到题目（请检查一级标题 #）', 'error');
+      return;
+    }
+    showToast('生成成功！', 'info');
+    if (problems.length === 1) await copyCode(problems[0].code);
+  } catch (error) {
+    showToast(error.message, 'error');
+  } finally {
+    button.disabled = false;
   }
 });
 
@@ -460,12 +250,20 @@ document.querySelector('#cancel-html-input').addEventListener('click', () => {
   htmlInputDialogEl.close();
 });
 
-document.querySelector('#confirm-html-input').addEventListener('click', async () => {
-  const desc = await generateInjectScript(htmlInputEl.value);
-  const code = generateConsoleCode(desc, withDefaultFields());
-  htmlInputDialogEl.close();
-  showCode(code);
-  await copyCode(code);
+document.querySelector('#confirm-html-input').addEventListener('click', async (event) => {
+  const button = event.currentTarget;
+  button.disabled = true;
+  try {
+    const html = htmlInputEl.value;
+    const {code} = await generateProblem({html, source: html, format: 'html'});
+    htmlInputDialogEl.close();
+    showCode(code);
+    await copyCode(code);
+  } catch (error) {
+    showToast(error.message, 'error');
+  } finally {
+    button.disabled = false;
+  }
 });
 
 document.querySelector('#close-dialog').addEventListener('click', () => dialogEl.close());
